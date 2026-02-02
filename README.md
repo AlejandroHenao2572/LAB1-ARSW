@@ -1,20 +1,20 @@
-# 🧵 Laboratorio ARSW - Introducción a la Concurrencia
+# Laboratorio 1 ARSW - Concurrencia
 
 **Arquitectura de Software**
 
-👥 **Autores:**
+**Autores:**
 - David Alejandro Patacón Henao
 - Daniel Felipe Hueso Rueda
 
 ---
 
-## 📝 Descripción
+## Descripción
 
 Este laboratorio explora los conceptos fundamentales de **programación concurrente** mediante la creación de hilos que cuentan números en rangos específicos. El objetivo es entender la diferencia entre ejecución **concurrente** y **secuencial**, implementando la solución en dos lenguajes: **Java** y **Go**.
 
 ---
 
-## 🎯 Punto 1: Implementación de Hilos
+## Punto 1: Implementación de Hilos
 
 ### **Objetivo**
 Crear 3 hilos que cuenten números en rangos diferentes:
@@ -24,7 +24,7 @@ Crear 3 hilos que cuenten números en rangos diferentes:
 
 ---
 
-## ☕ Implementación en Java
+## Implementación en Java
 
 ### **Estructura del Código**
 
@@ -39,24 +39,20 @@ Crear 3 hilos que cuenten números en rangos diferentes:
 
 ### **Diferencia entre `start()` y `run()`**
 
-#### 🚀 **Método `start()`**
+#### **Método `start()`**
 - **Concurrente:** Crea un nuevo hilo y ejecuta el método `run()` en paralelo
 - **Comportamiento:** Los tres hilos se ejecutan simultáneamente
 - **Resultado:** Salida intercalada y no ordenada
 - **Uso:** Programación multihilo real  
-![alt text](img/start.png)
 
 
-#### 🔄 **Método `run()`**
+#### **Método `run()`**
 - **Secuencial:** Ejecuta el método directamente en el hilo actual (main)
 - **Comportamiento:** Los hilos se ejecutan uno tras otro
 - **Resultado:** Salida ordenada (0-299 en secuencia)
 - **Uso:** No crea hilos nuevos, solo llama al método  
-![alt text](img/run.png)
 
----
-
-## 🐹 Implementación en Go
+## Implementación en Go
 
 #### 1. **`sync.WaitGroup`**
 - Sincroniza la ejecución de goroutines
@@ -70,13 +66,9 @@ Crear 3 hilos que cuenten números en rangos diferentes:
 - Más eficiente que los hilos tradicionales
 
 #### 3. **`defer wg.Done()`**
-- Asegura que `Done()` se ejecute al finalizar la función
+- Asegura que `Done()` se ejecute al finalizar la función  
 
-![alt text](img/ejecucionGo.png)
-
----
-
-## 📊 Análisis de Resultados
+## Análisis de Resultados
 
 ### **Ejecución Concurrente con `start()` en Java**
 ![Ejecución con start()](img/start.png)

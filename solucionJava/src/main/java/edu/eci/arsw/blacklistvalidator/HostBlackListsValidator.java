@@ -29,24 +29,47 @@ public class HostBlackListsValidator {
      * @param ipaddress suspicious host's IP address.
      * @return  Blacklists numbers where the given host's IP address was found.
      */
-    public List<Integer> checkHost(String ipaddress){
+    public List<Integer> checkHost(String ipaddress, int n){
         
         LinkedList<Integer> blackListOcurrences=new LinkedList<>();
         
-        int ocurrencesCount=0;
+        int ocurrencesCount=0; //Contador de ocurrencias encontradas
+        int checkedListsCount=0; // Contador de listas negras revisadas
         
         HostBlacklistsDataSourceFacade skds=HostBlacklistsDataSourceFacade.getInstance();
-        
-        int checkedListsCount=0;
-        
-        for (int i=0;i<skds.getRegisteredServersCount() && ocurrencesCount<BLACK_LIST_ALARM_COUNT;i++){
-            checkedListsCount++;
+
+        //Calcular la cantidad de servidores por hilo
+        int Totalserves = skds.getRegisteredServersCount(); //Obtener el total de servidores
+        int serverPerThread = Totalserves / n; // Servidores por hilo
+        int resto = Totalserves % n; // Calcular el resto
+        BlackListThread[] threads = new BlackListThread[n]; //Lista de hilos
+
+        //Crear los hilos distribuyendo el resto uniformemente
+        int currentStart = 0;
+        for(int i = 0; i < n; i++) {
+            // Los hilos resto reciben 1 servidor extra
+            int serversForThisThread = serverPerThread + (i < resto ? 1 : 0);
+            int start = currentStart;
+            int end = start + serversForThisThread;
             
-            if (skds.isInBlackListServer(i, ipaddress)){
-                
-                blackListOcurrences.add(i);
-                
-                ocurrencesCount++;
+            threads[i] = new BlackListThread(start, end, ipaddress);
+            threads[i].start();
+            
+            currentStart = end; // Actualizar el inicio para el próximo hilo
+        }
+
+        //Recoger los resultados de los hilos
+        for(int i = 0; i < n && ocurrencesCount < BLACK_LIST_ALARM_COUNT; i++) {
+            try {
+                // Esperar a que el hilo termine
+                threads[i].join();
+                // Acumular los resultados
+                ocurrencesCount += threads[i].getOcurrencesCount();
+                checkedListsCount += threads[i].getCheckedServersCount();
+                // Añadir las ocurrencias encontradas por el hilo a la lista principal
+                blackListOcurrences.addAll(threads[i].getBlackListOcurrences());
+            } catch (InterruptedException e) {
+                LOG.log(Level.SEVERE, "Thread interrupted", e);
             }
         }
         

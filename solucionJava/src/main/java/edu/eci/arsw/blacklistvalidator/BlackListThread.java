@@ -1,0 +1,49 @@
+package edu.eci.arsw.blacklistvalidator;
+
+import edu.eci.arsw.spamkeywordsdatasource.HostBlacklistsDataSourceFacade;
+import java.util.*;
+
+class BlackListThread extends Thread {
+  
+    private int inicio; // rango inicial de hostnames a revisar
+    private int fin;    // rango final de hostnames a revisar
+    private String ipaddress; // dirección IP a revisar
+    private HostBlacklistsDataSourceFacade skds; // fuente de datos de listas negras
+    private int ocurrencesCount; // contador de ocurrencias encontradas
+    private LinkedList<Integer> blackListOcurrences; // lista de ocurrencias encontradas
+    private int checkedServersCount; // contador de servidores revisados
+
+    public BlackListThread(int inicio, int fin, String ipaddress) {
+        this.inicio = inicio;
+        this.fin = fin;
+        this.ipaddress = ipaddress;
+        this.skds = HostBlacklistsDataSourceFacade.getInstance();
+        this.ocurrencesCount = 0;
+        this.blackListOcurrences = new LinkedList<>();
+        this.checkedServersCount = 0;
+    }
+    
+    @Override
+    // Metodo que se ejecuta al iniciar el hilo y busca occurrencias en el rango asignado
+    public void run() {
+        for (int i = inicio; i < fin; i++) {
+            checkedServersCount++; // Incrementar el contador por cada servidor revisado
+            if (skds.isInBlackListServer(i, ipaddress)) {
+                blackListOcurrences.add(i);
+                ocurrencesCount++;
+            }
+        }
+    }
+    
+    public int getOcurrencesCount() {
+        return ocurrencesCount;
+    }
+    
+    public List<Integer> getBlackListOcurrences() {
+        return blackListOcurrences;
+    }
+    
+    public int getCheckedServersCount() {
+        return checkedServersCount;
+    }
+}
