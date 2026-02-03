@@ -74,8 +74,6 @@ func (ds *BlacklistDataSource) initializeData() {
 	addOccurrence(10134, "202.24.34.54")
 	addOccurrence(20300, "202.24.34.54")
 	addOccurrence(70210, "202.24.34.54")
-
-	fmt.Println("BlacklistDataSource initialized with test data")
 }
 
 // GetRegisteredServersCount retorna el total de servidores disponibles

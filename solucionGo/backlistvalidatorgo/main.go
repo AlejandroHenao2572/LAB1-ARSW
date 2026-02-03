@@ -2,26 +2,29 @@ package main
 
 import (
 	"fmt"
+	"runtime"
+	"time"
 )
 
 func main() {
-	validator := NewValidator()
+	testIP := "202.24.34.55"
+	numCores := runtime.NumCPU()
 
-	// NUmero de goroutines a utilizar
-	n := 100
+	fmt.Printf("Nucleos: %d | IP: %s\n", numCores, testIP)
 
-	// Probar con el IP del ejemplo de java
-	testIP := "200.24.34.55"
+	// Configuraciones a probar (igual que en Java)
+	numGoroutines := []int{1, numCores, numCores * 2, 50, 100, 1000, 100000}
 
-	occurrences, checkedServers := validator.CheckHost(testIP, n)
+	fmt.Println("\nGoroutines\tTiempo (ms)")
+	fmt.Println("---------------------------")
 
-	fmt.Printf("\nThe host was found in the following blacklists: %v\n", occurrences)
-	fmt.Printf("Checked %d servers out of %d\n", checkedServers, validator.dataSource.GetRegisteredServersCount())
+	for _, n := range numGoroutines {
+		validator := NewValidator()
 
-	// Determinar si el host es confiable
-	if len(occurrences) >= BackListAlarmCount {
-		fmt.Printf("\nThe host %s is NOT trustworthy (found in %d blacklists)\n", testIP, len(occurrences))
-	} else {
-		fmt.Printf("\nThe host %s is trustworthy (found in %d blacklists)\n", testIP, len(occurrences))
+		inicio := time.Now()
+		validator.CheckHost(testIP, n)
+		duracion := time.Since(inicio)
+
+		fmt.Printf("%d\t\t%d\n", n, duracion.Milliseconds())
 	}
 }

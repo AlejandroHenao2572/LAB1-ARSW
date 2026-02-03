@@ -24,7 +24,7 @@ public class Main {
         System.out.println("Nucleos: " + numCores + " | IP: " + ipAddress);
         
         // Configuraciones a probar
-        int[] numThreads = {1, numCores, numCores * 2, 50, 100, 1000, 100000, 1000000, 10000000}; // Numero de cores
+        int[] numThreads = {1, numCores, numCores * 2, 50, 100, 1000, 100000}; // Numero de cores
 
         System.out.println("\nHilos\tTiempo (ms)");
         System.out.println("---------------------");

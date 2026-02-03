@@ -252,6 +252,178 @@ En este caso se implementó la optimización tanto en Java como en Go, utilizand
 ### Ejemplo de ejecucion Optimizada en Java
 ![alt text](img/ejecucionJava2.png)
 
+---
+
+## Parte 3: Análisis de Rendimiento
+
+### Configuración del Sistema de Pruebas
+- **Procesador:** 20 núcleos
+- **IP de prueba:** 202.24.34.55
+- **Servidores totales:** 80,000
+
+### Resultados de Rendimiento  
+Se realizaron pruebas con diferentes números de hilos para analizar el impacto de la concurrencia en el rendimiento:
+
+### Especificaciones tecnicas del equipo: ASUSU ROG Strix G15
+- **Procesador:** 13th Gen Intel(R) Core(TM) i7-13650HX (2.60 GHz) (20 Cores)
+- **RAM:** 16,0 GB  
+- **Grafica:** NVIDIA GeForce RTX 4060
+
+### Ejecucion de solucion en java
+| Hilos | Tiempo (ms) | 
+|-------|-------------|
+| 1 | 111,472 |
+| 20 | 4,495 |  
+| 40 | 1,509 |  
+| 50 | 1,461 | 
+| 100 | 919 | 
+| 1000 | 186 |
+| 100000 | 7,149 | 
+
+## Resultados de visualVM  
+![alt text](img/testVM.png)
+
+### Ejecucion de solucion en go
+| Goroutines | Tiempo (ms) |
+|-------|-------------|
+| 1 | 11 |
+| 20 | 20 |  
+| 40 | 10 |  
+| 50 | 9 | 
+| 100 | 12 | 
+| 1000 | 17 |
+| 100000 | 40 | 
+
+## Resultados de Task Manager
+![alt text](img/testWIN.png)
+
+### Especificaciones tecnicas del equipo 2: MSI 15C 
+- **Procesador:** 13th Gen Intel(R) Core(TM) i5-13420HX (2.10 GHz) (12 Cores)
+- **RAM:** 16,0 GB  
+- **Grafica:** NVIDIA GeForce RTX 4060
+
+### Ejecucion de solucion en java
+| Hilos | Tiempo (ms) | 
+|-------|-------------|
+| 1 | 142,222 |
+| 12 | 6,743 |  
+| 24 | 1,595 |  
+| 50 | 1,551 | 
+| 100 | 993 | 
+| 1000 | 206 |
+| 100000 | 6,704 | 
+
+### Resultados de visualVM  
+![alt text](img/testVM2.png)
+
+### Ejecucion de solucion en go
+| Goroutines | Tiempo (ms) |
+|-------|-------------|
+| 1 |  |
+| 12 |  |  
+| 24 |  |  
+| 50 |  | 
+| 100 |  | 
+| 1000 |  |
+| 100000 |  | 
+
+### Resultados de Task Manager
+![alt text](img/testWIN2.png)
+
+## Observaciones Clave
+
+**Punto óptimo de hilos:**
+Para esta tarea específica, **1000 hilos** representa el equilibrio ideal entre:
+- Suficiente concurrencia para maximizar el uso de CPU
+- Overhead manejable de creación y gestión de hilos
+
+**Overhead de hilos excesivos:**
+Con 100,000 hilos, el rendimiento se degrada drásticamente debido a:
+- **Sobrecarga de memoria:** Cada hilo consume stack space
+- **Thrashing del scheduler:** El sistema operativo pasa más tiempo cambiando contexto que ejecutando trabajo
+- **Contención de recursos:** Competencia excesiva por CPU y memoria
+- **El computador se sobrecarga:** Despues de estar ejecuando la pruenta con 100,000 hilos, el sistema se vuelve congela y requiere un reinicio.
+
+### Gráfica de Rendimiento
+El rendimiento muestra una mejora exponencial hasta aproximadamente 1000 hilos, seguida de una degradación drástica al exceder ese punto óptimo. Esto ilustra la importancia de encontrar el balance correcto entre concurrencia y overhead del sistema.
+
+---
+
+## Parte 4 - Preguntas sobre la Ley de Amdahl
+
+### 1. ¿Por qué el mejor desempeño no se logra con 500 hilos? ¿Cómo se compara con 200?
+
+Según nuestros resultados, el mejor desempeño se logró con **1000 hilos (186 ms)**, no con 500. Sin embargo, cuando llegamos a **100,000 hilos (7,149 ms)** el rendimiento se degrada drásticamente.
+
+**Razón principal:** Aunque la Ley de Amdahl predice mejoras con más hilos, en la práctica hay un punto donde el **overhead** (costo) de crear y gestionar tantos hilos supera los beneficios. 
+
+Con 500 o 200 hilos todavía hay mejora porque:
+- El overhead de gestión es relativamente bajo
+- Los hilos pueden aprovechar los tiempos de espera
+- El sistema aún puede manejarlos eficientemente
+
+Pero después de cierto punto (en nuestro caso, más allá de ~1000), el sistema gasta más tiempo:
+- Cambiando de contexto entre hilos
+- Asignando memoria para cada hilo
+- Sincronizando el acceso a recursos compartidos
+
+**Comparación:** 200 hilos sería más lento que 1000 pero más rápido que 100,000, ya que aún no alcanza el punto de saturación del sistema.
+
+---
+
+### 2. ¿Cómo se comporta la solución usando tantos hilos como núcleos (20) comparado con el doble (40)?
+
+Según nuestros resultados:
+- **20 hilos (igual a núcleos):** 4,495 ms
+- **40 hilos (doble de núcleos):** 1,509 ms
+
+**Observación:** Usar el **doble de hilos mejora el rendimiento ~3 veces** (4495/1509 ≈ 2.98x)
+
+**¿Por qué funciona mejor con más hilos que núcleos?**
+
+Porque esta tarea es **I/O-bound** (limitada por entrada/salida):
+- Cuando un hilo espera respuesta de un servidor (I/O), el núcleo queda libre
+- Otro hilo puede usar ese núcleo mientras tanto
+- Con solo 20 hilos, hay momentos donde los núcleos están ociosos esperando I/O
+- Con 40 hilos, hay más trabajo disponible para mantener los núcleos ocupados
+
+---
+
+### 3. ¿La Ley de Amdahl se aplicaría mejor con 1 hilo en 100 máquinas? ¿Y con c hilos en 100/c máquinas?
+
+#### a) 1 hilo en cada una de 100 máquinas:
+
+**Sí, la Ley de Amdahl se aplicaría mejor**, porque:
+- Eliminamos el overhead de gestión de múltiples hilos en una sola máquina
+- Cada máquina tiene sus propios recursos (CPU, memoria, caché)
+- No hay contención por recursos compartidos
+- La comunicación entre máquinas sería mínima (solo para reportar resultados)
+
+**Limitación:** Depende de la latencia de red y la coordinación entre máquinas.
+
+#### b) c hilos en 100/c máquinas distribuidas:
+
+**Sí, esto sería aun mejor**, porque:
+
+Ejemplo con 20 núcleos por máquina (c=20):
+- Usaríamos 20 hilos en 5 máquinas (100/20 = 5)
+- Cada máquina usa sus hilos de manera óptima (c hilos = c núcleos)
+- Reducimos el overhead de tener demasiados hilos en una sola máquina
+- Mantenemos la distribución del trabajo
+
+**Ventajas:**
+1. **Balance ideal:** Cada máquina usa exactamente sus núcleos disponibles
+2. **Menos overhead:** No hay exceso de hilos compitiendo por recursos
+3. **Escalabilidad:** Más fácil escalar agregando más máquinas
+4. **Aislamiento:** Un problema en una máquina no afecta a las demás
+
+**Conclusión:** La combinación **c hilos × 100/c máquinas** aprovecha mejor el paralelismo porque:
+- Distribuye la carga sin saturar ninguna máquina individual
+- Cada máquina opera en su punto óptimo de eficiencia
+- Se minimiza tanto el overhead de hilos como el de coordinación de red
+
+
+
 
 
 
