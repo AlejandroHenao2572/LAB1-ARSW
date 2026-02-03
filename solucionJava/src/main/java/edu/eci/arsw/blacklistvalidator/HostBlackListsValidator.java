@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -17,7 +18,8 @@ import java.util.logging.Logger;
  */
 public class HostBlackListsValidator {
 
-    private static final int BLACK_LIST_ALARM_COUNT=5;
+    static final int BLACK_LIST_ALARM_COUNT=5;
+    AtomicInteger globalOccurrencesCount = new AtomicInteger(0); //Contador global de ocurrencias, compartido entre hilos
     
     /**
      * Check the given host's IP address in all the available black lists,
@@ -52,14 +54,15 @@ public class HostBlackListsValidator {
             int start = currentStart;
             int end = start + serversForThisThread;
             
-            threads[i] = new BlackListThread(start, end, ipaddress);
+            //Crear y iniciar el hilo
+            threads[i] = new BlackListThread(start, end, ipaddress, globalOccurrencesCount);
             threads[i].start();
             
             currentStart = end; // Actualizar el inicio para el próximo hilo
         }
 
         //Recoger los resultados de los hilos
-        for(int i = 0; i < n && ocurrencesCount < BLACK_LIST_ALARM_COUNT; i++) {
+        for(int i = 0; i < n ; i++) {
             try {
                 // Esperar a que el hilo termine
                 threads[i].join();
@@ -87,7 +90,4 @@ public class HostBlackListsValidator {
     
     
     private static final Logger LOG = Logger.getLogger(HostBlackListsValidator.class.getName());
-    
-    
-    
 }

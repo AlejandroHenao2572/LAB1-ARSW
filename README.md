@@ -14,7 +14,7 @@ Este laboratorio explora los conceptos fundamentales de **programación concurre
 
 ---
 
-## Punto 1: Implementación de Hilos
+## Parte 1: Implementación de Hilos
 
 ### **Objetivo**
 Crear 3 hilos que cuenten números en rangos diferentes:
@@ -100,7 +100,7 @@ Crear 3 hilos que cuenten números en rangos diferentes:
 
 ---
 
-## Punto 2: Ejercicio Black List Search
+## Parte 2: Ejercicio Black List Search
 
 ### Descripcion del Problema
 
@@ -183,6 +183,75 @@ Ambas implementaciones usan la misma estrategia de distribuir el resto uniformem
 
 ### Ejemplo de Ejecucion en Go
 ![Ejecución BlackListValidator Go](img/ejecucionGoBL.png)
+
+---
+
+## Parte 2.1: Optimización - Detención Temprana
+
+### Problema de Ineficiencia
+
+La implementación actual presenta una limitacion: todos los hilos continuan buscando en sus rangos asignados incluso después de que colectivamente ya se han encontrado las 5 ocurrencias mínimas necesarias para reportar la IP como maliciosa. Esto significa que si las primeras ocurrencias se encuentran rápidamente, se siguen revisando innecesariamente miles de servidores adicionales.
+
+**Ejemplo del problema:**
+Si con 100 hilos las 5 ocurrencias se encuentran en los primeros 1,000 servidores, los 79,000 servidores restantes se siguen revisando de todas formas.
+
+### Solución Propuesta: Detención Temprana
+
+La optimización consiste en implementar un mecanismo que permita detener todos los hilos tan pronto como se alcance el umbral de 5 ocurrencias. Esto requiere:
+
+**1. Variable compartida para el contador global de ocurrencias**
+
+Los hilos deben poder consultar en tiempo real cuantas ocurrencias se han encontrado en total. Esto requiere una variable compartida accesible por todos los hilos.
+
+**2. Sincronización del acceso a la variable compartida**
+
+Como múltiples hilos leerán y modificarán el contador simultáneamente, se necesita sincronización para evitar condiciones de carrera. Las solciones para lenguaje son:
+
+- **Java:** utilizar `AtomicInteger` para manejar el acceso a la variable compartida, en cada servidor encontrado se incrementa atomícamente. En cada iteración, el hilo verifica si el contador ha alcanzado el umbral necesario.
+
+- **Go:** Usar `atomic` para proteger el acceso a la variable compartida. Cada goroutine incrementa el contador atómicamente y verifica su valor antes de continuar.
+
+**3. Verificación periódica dentro del ciclo de búsqueda**
+
+Cada hilo debe verificar regularmente si el contador global ha alcanzado 5 o la cantidad especificada de ocurrencias. Si es así, debe terminar su búsqueda inmediatamente.
+
+**4. Notificación entre hilos**
+
+Cuando un hilo encuentra una ocurrencia, debe actualizar el contador compartido y notificar a otros hilos que se alcanzó el límite.
+
+### Nuevos Elementos que Introduce
+
+**Variables compartidas:**
+Ahora se requiere estado compartido entre hilos.
+
+**Condiciones de carrera:**
+Múltiples hilos accediendo y modificando la misma variable pueden causar inconsistencias si no se sincronizan correctamente.
+
+**Overhead de sincronización:**
+Verificar el contador compartido repetidamente y usar mecanismos de sincronización añade costo computacional. 
+
+**Complejidad del código:**
+La lógica se vuelve más compleja al manejar sincronización, verificaciones adicionales y terminación temprana de hilos.
+
+**Ventajas:**
+- Reduce el número de consultas cuando las ocurrencias se encuentran temprano
+- Mejora el tiempo de respuesta en casos favorables
+- Ahorra recursos de procesamiento
+
+**Desventajas:**
+- Mayor complejidad del código
+- Posible contención si muchos hilos acceden al contador simultáneamente
+- Requiere diseño cuidadoso para evitar errores de concurrencia
+
+### Ejecución de la Optimización
+En este caso se implementó la optimización tanto en Java como en Go, utilizando `AtomicInteger` en Java y `atomic` en Go para manejar el contador global de ocurrencias.
+
+### Ejemplo de ejecucion Optimizada en Go
+![alt text](img/ejecionGo2.png)
+
+### Ejemplo de ejecucion Optimizada en Java
+![alt text](img/ejecucionJava2.png)
+
 
 
 

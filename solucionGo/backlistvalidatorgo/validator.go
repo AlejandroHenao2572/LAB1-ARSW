@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 const BackListAlarmCount = 5
 
@@ -13,7 +16,8 @@ type SearchResult struct {
 
 // Valdator es el equivalente a HostBlackListsValidator en Java, valida las IPs en las listas negras
 type Validator struct {
-	dataSource *BlacklistDataSource
+	dataSource             *BlacklistDataSource
+	globalOccurrencesCount int32 // Contador global de ocurrencias, compartido entre goroutines
 }
 
 // NewValidator crea una nueva instancia de Validator
@@ -24,7 +28,8 @@ func NewValidator() *Validator {
 }
 
 // CheckHost revisa si una IP esta en las listas negras usando n goroutines
-func (v *Validator) CheckHost(ip string, n int) []int {
+// Retorna: lista de servidores donde se encontro la IP y total de servidores revisados
+func (v *Validator) CheckHost(ip string, n int) ([]int, int) {
 	totalServers := v.dataSource.GetRegisteredServersCount() // Total de servidores
 	serversPerGoroutine := totalServers / n                  // Servidores por goroutine
 	remainder := totalServers % n                            // Servidores restantes
@@ -47,7 +52,7 @@ func (v *Validator) CheckHost(ip string, n int) []int {
 		end := start + serversForThisGoroutine
 
 		//Lanzar la goroutine
-		go v.searchInRange(start, end, ip, &wg, resultChan)
+		go v.searchInRange(start, end, ip, &wg, resultChan, &v.globalOccurrencesCount)
 	}
 	wg.Wait()         // Esperar a que todas las goroutines terminen
 	close(resultChan) // Cerrar el canal de resultados
@@ -63,10 +68,10 @@ func (v *Validator) CheckHost(ip string, n int) []int {
 		totalCheckedServers += res.checkedServes
 	}
 
-	return allOccurrences
+	return allOccurrences, totalCheckedServers
 }
 
-func (v *Validator) searchInRange(start, end int, ip string, wg *sync.WaitGroup, resultChan chan<- SearchResult) {
+func (v *Validator) searchInRange(start, end int, ip string, wg *sync.WaitGroup, resultChan chan<- SearchResult, globalOccurrencesCount *int32) {
 	defer wg.Done() // Marcar la goroutine como terminada al finalizar
 
 	//Crear estructura de resultado
@@ -78,11 +83,17 @@ func (v *Validator) searchInRange(start, end int, ip string, wg *sync.WaitGroup,
 
 	// Buscar en el rango asignado
 	for i := start; i < end; i++ {
+
+		if atomic.LoadInt32(globalOccurrencesCount) >= BackListAlarmCount {
+			break // Salir del bucle si se ha alcanzado el umbral
+		}
+
 		result.checkedServes++
 		// Verificar si la IP está en el servidor i
 		if v.dataSource.IsInBlackListServer(i, ip) {
 			result.Occurrences = append(result.Occurrences, i)
 			result.OcurrencesCount++
+			atomic.AddInt32(globalOccurrencesCount, 1)
 		}
 	}
 
